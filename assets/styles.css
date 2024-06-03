@@ -1,0 +1,55 @@
+/* General Styles */
+body {
+    background-color: #f9f9f9;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.header-title {
+    text-align: center;
+    color: #333;
+}
+
+.header-description {
+    text-align: center;
+    color: #666;
+}
+
+.controls-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.dropdown-container, .radio-container {
+    flex: 1;
+    padding: 0 10px;
+}
+
+.dropdown {
+    width: 100%;
+}
+
+.radio-items {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+}
+
+.graph-container {
+    margin-bottom: 40px;
+}
+
+/* Graph Styles */
+.plotly-graph-div {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
