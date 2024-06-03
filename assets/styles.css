@@ -26,7 +26,7 @@ body {
     margin-bottom: 20px;
 }
 
-.dropdown-container, .radio-container {
+.dropdown-container {
     flex: 1;
     padding: 0 10px;
 }
@@ -35,15 +35,8 @@ body {
     width: 100%;
 }
 
-.radio-items {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-}
-
 .graph-container {
-    margin-bottom: 40px;
+    margin-top: 40px;
 }
 
 /* Graph Styles */

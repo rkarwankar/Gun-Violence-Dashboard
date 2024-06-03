@@ -17,66 +17,139 @@ df = pd.read_csv(data_path)
 # Initialize the app
 app = dash.Dash(__name__)
 
+# Extract unique values for dropdown options
+years = sorted(df['year'].unique())
+states = ['All States'] + sorted(df['state'].unique())
+genders = ['All Genders'] + sorted(df['victim_sex'].unique())
+age_groups = ['All Ages'] + sorted(df['victim_age'].dropna().astype(str).unique())
+
 # App layout
-app.layout = html.Div([
+app.layout = html.Div(className="container", children=[
     html.H1("US Gun Violence Analysis (1985-2018)", className="header-title"),
     html.P("An interactive analysis of gun violence incidents in the United States from 1985 to 2018.", className="header-description"),
-    
-    # Dropdown for selecting visualization
-    dcc.Dropdown(
-        id='visualization-dropdown',
-        options=[
-            {'label': 'Victim Demographics', 'value': 'victim_demographics'},
-            {'label': 'Weapon Used', 'value': 'weapon_used'},
-            {'label': 'Circumstances of Incidents', 'value': 'incident_circumstances'},
-            {'label': 'Geographical Analysis', 'value': 'geographical_analysis'},
-            {'label': 'Relationship between Offender and Victim', 'value': 'relationship_offender_victim'}
-        ],
-        value='victim_demographics',
-        clearable=False
-    ),
-    
-    # Div for displaying selected visualization
-    html.Div(id='visualization-output')
+
+    html.Div(className="controls-container", children=[
+        html.Div(className="dropdown-container", children=[
+            html.Label("Select Year:"),
+            dcc.Dropdown(
+                id='year-dropdown',
+                options=[{'label': year, 'value': year} for year in years],
+                value=years[0],
+                clearable=False,
+                className="dropdown"
+            )
+        ]),
+        html.Div(className="dropdown-container", children=[
+            html.Label("Select State:"),
+            dcc.Dropdown(
+                id='state-dropdown',
+                options=[{'label': state, 'value': state} for state in states],
+                value='All States',
+                clearable=False,
+                className="dropdown"
+            )
+        ]),
+        html.Div(className="dropdown-container", children=[
+            html.Label("Select Gender:"),
+            dcc.Dropdown(
+                id='gender-dropdown',
+                options=[{'label': gender, 'value': gender} for gender in genders],
+                value='All Genders',
+                clearable=False,
+                className="dropdown"
+            )
+        ]),
+        html.Div(className="dropdown-container", children=[
+            html.Label("Select Age Group:"),
+            dcc.Dropdown(
+                id='age-group-dropdown',
+                options=[{'label': age, 'value': age} for age in age_groups],
+                value='All Ages',
+                clearable=False,
+                className="dropdown"
+            )
+        ])
+    ]),
+
+    html.Div(id='main-visualization', className="graph-container"),
+    html.Div(id='weapon-visualization', className="graph-container"),
+    html.Div(id='circumstance-visualization', className="graph-container"),
+    html.Div(id='relationship-visualization', className="graph-container")
 ])
 
-# Callback to update visualization based on dropdown selection
+# Callback to update main visualization based on filters
 @app.callback(
-    Output('visualization-output', 'children'),
-    [Input('visualization-dropdown', 'value')]
+    [Output('main-visualization', 'children'),
+     Output('weapon-visualization', 'children'),
+     Output('circumstance-visualization', 'children'),
+     Output('relationship-visualization', 'children')],
+    [Input('year-dropdown', 'value'),
+     Input('state-dropdown', 'value'),
+     Input('gender-dropdown', 'value'),
+     Input('age-group-dropdown', 'value')]
 )
-def update_visualization(selected_option):
-    if selected_option == 'victim_demographics':
-        # Victim Demographics: Age distribution
-        age_fig = px.histogram(df, x='victim_age', title='Age Distribution of Gun Violence Victims')
-        return dcc.Graph(figure=age_fig)
-    
-    elif selected_option == 'weapon_used':
-        # Weapon Used: Types of weapons
-        weapon_fig = px.bar(df['weapon_used'].value_counts(), x=df['weapon_used'].value_counts().index, y=df['weapon_used'].value_counts().values, 
-                             labels={'x': 'Weapon Type', 'y': 'Count'}, title='Types of Weapons Used in Gun Violence Incidents')
-        return dcc.Graph(figure=weapon_fig)
-    
-    elif selected_option == 'incident_circumstances':
-        # Circumstances of Incidents: Top 10 circumstances
-        circumstance_fig = px.bar(df['circumstance'].value_counts().head(10), x=df['circumstance'].value_counts().head(10).index, y=df['circumstance'].value_counts().head(10).values,
-                                  labels={'x': 'Circumstance', 'y': 'Count'}, title='Top 10 Circumstances of Gun Violence Incidents')
-        return dcc.Graph(figure=circumstance_fig)
-    
-    elif selected_option == 'geographical_analysis':
-        # Geographical Analysis: Incidents by state
-        state_fig = px.choropleth(df.groupby('state').size().reset_index(name='count'), 
-                                   locations='state', locationmode='USA-states', color='count', 
-                                   scope="usa", title='Gun Violence Incidents by State')
-        return dcc.Graph(figure=state_fig)
-    
-    elif selected_option == 'relationship_offender_victim':
-        # Relationship between Offender and Victim
-        relationship_fig = px.histogram(df, x='offenders_relationship_to_victim_grouping', title='Relationship between Offender and Victim')
-        return dcc.Graph(figure=relationship_fig)
-    
-    else:
-        return html.P("Please select a visualization option.")
+def update_visualizations(selected_year, selected_state, selected_gender, selected_age_group):
+    filtered_df = df[df['year'] == selected_year]
+
+    if selected_state != 'All States':
+        filtered_df = filtered_df[filtered_df['state'] == selected_state]
+
+    if selected_gender != 'All Genders':
+        filtered_df = filtered_df[filtered_df['victim_sex'] == selected_gender]
+
+    if selected_age_group != 'All Ages':
+        filtered_df = filtered_df[filtered_df['victim_age'].astype(str) == selected_age_group]
+
+    # Main Visualization: Geographical Analysis
+    fig_geo = px.scatter_geo(
+        filtered_df,
+        locations="state",
+        locationmode="USA-states",
+        color="victim_race_plus_hispanic",
+        hover_name="state",
+        size="multiple_victim_count",
+        title="Gun Violence Incidents in the US",
+        scope="usa"
+    )
+
+    fig_geo.update_layout(
+        margin={"r":0,"t":50,"l":0,"b":0},
+        geo=dict(bgcolor='rgba(0,0,0,0)')
+    )
+
+    # Weapon Used Visualization
+    weapon_counts = filtered_df['weapon_used'].value_counts().reset_index()
+    weapon_counts.columns = ['weapon_used', 'count']
+    fig_weapon = px.bar(
+        weapon_counts,
+        x='weapon_used', y='count',
+        labels={'weapon_used': 'Weapon Type', 'count': 'Count'},
+        title='Types of Weapons Used in Gun Violence Incidents'
+    )
+
+    # Circumstances Visualization
+    circumstance_counts = filtered_df['circumstance'].value_counts().reset_index().head(10)
+    circumstance_counts.columns = ['circumstance', 'count']
+    fig_circumstance = px.bar(
+        circumstance_counts,
+        x='circumstance', y='count',
+        labels={'circumstance': 'Circumstance', 'count': 'Count'},
+        title='Top 10 Circumstances of Gun Violence Incidents'
+    )
+
+    # Relationship between Offender and Victim Visualization
+    fig_relationship = px.histogram(
+        filtered_df,
+        x='offenders_relationship_to_victim_grouping',
+        title='Relationship between Offender and Victim'
+    )
+
+    return (
+        dcc.Graph(figure=fig_geo),
+        dcc.Graph(figure=fig_weapon),
+        dcc.Graph(figure=fig_circumstance),
+        dcc.Graph(figure=fig_relationship)
+    )
 
 # Run the app
 if __name__ == '__main__':
